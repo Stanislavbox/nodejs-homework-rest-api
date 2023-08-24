@@ -63,9 +63,19 @@ const getCurrent = async (req, res) => {
 const logout = async (req, res) => {
   const { _id } = req.user;
   await User.findByIdAndUpdate(_id, { token: "" });
-  const { authorization } = req.headers;
 
   res.status(204).json();
+};
+
+const updateSubscription = async (req, res) => {
+  const { _id } = req.user;
+  const { subscription } = req.body;
+
+  await User.findByIdAndUpdate({ _id }, { subscription }, { new: true });
+
+  res.json({
+    subscription: subscription,
+  });
 };
 
 module.exports = {
@@ -73,4 +83,5 @@ module.exports = {
   login: ctrlWrapper(login),
   getCurrent: ctrlWrapper(getCurrent),
   logout: ctrlWrapper(logout),
+  updateSubscription: ctrlWrapper(updateSubscription),
 };
