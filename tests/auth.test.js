@@ -8,37 +8,46 @@
 //? Тест работает если в другом терминале запустить сервер(npm run dev).
 
 const request = require("supertest");
-const baseURL = "http://localhost:3000/users";
+require("dotenv").config();
+const app = require("../app");
+const mongoose = require("mongoose");
+
+const { User } = require("../models/user");
+
+const { DB_HOST, PORT } = process.env;
 
 describe("Test the signup", () => {
-  it("'/login' return status 200", async () => {
-    const result = await request(baseURL)
-      .post("/login")
-      .send({ email: "user@gmail.com", password: "654321" });
-
-    expect(result.statusCode).toBe(200);
+  let server = null;
+  beforeAll(async () => {
+    await mongoose.connect(DB_HOST);
+    server = app.listen(PORT);
   });
 
-  it("'/login' return token", async () => {
-    const result = await request(baseURL)
-      .post("/login")
-      .send({ email: "user@gmail.com", password: "654321" });
-
-    expect(result.body.token).toBeDefined();
+  afterAll(async () => {
+    await mongoose.connection.close();
+    server.close();
   });
 
-  it("'email' and 'subscription' must be a string", async () => {
-    const loginResult = await request(baseURL)
-      .post("/login")
-      .send({ email: "user@gmail.com", password: "654321" });
+  beforeEach(() => {});
 
-    const result = await request(baseURL)
-      .get("/current")
-      .set("Authorization", `Bearer ${loginResult.body.token}`);
+  afterEach(async () => {
+    await User.deleteMany({});
+  });
 
-    const { email, subscription } = result.body;
-    expect(typeof email).toBe("string");
-    expect(typeof subscription).toBe("string");
+  test("test signup with correct data", async () => {
+    const signupData = {
+      email: "user@gmail.com",
+      password: "654321",
+    };
+
+    const { statusCode, body } = await request(app)
+      .post("/users/register")
+      .send(signupData);
+
+    expect(statusCode).toBe(201);
+
+    expect(body.user.email).toBe(signupData.email);
+
+    expect(typeof body.user.subscription).toBe("string");
   });
 });
-
