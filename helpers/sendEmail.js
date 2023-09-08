@@ -26,7 +26,7 @@ const sendEmail = async (data) => {
       },
     });
 
-    await api.emailsPost(email);
+    api.emailsPost(email);
     return true;
 };
 
