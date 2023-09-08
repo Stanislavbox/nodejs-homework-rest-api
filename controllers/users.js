@@ -1,13 +1,21 @@
-const { User } = require("../models/user");
-const { HttpError, ctrlWrapper } = require("../helpers");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
 const path = require("path");
 const fs = require("fs/promises");
+const { nanoid } = require("nanoid");
+
+const { User } = require("../models/user");
+
+const { HttpError, ctrlWrapper, sendEmail } = require("../helpers");
+
+const { SECRET_KEY, BASE_URL } = process.env;
+
 const avatarsDir = path.join(__dirname, "../", "public", "avatars");
+
 const Jimp = require("jimp");
-const { SECRET_KEY } = process.env;
+
+
 
 const register = async (req, res) => {
   const { email, password } = req.body;
@@ -19,12 +27,22 @@ const register = async (req, res) => {
 
   const avatarURL = gravatar.url(email);
   const hashPassword = await bcrypt.hash(password, 10);
+  const verificationToken = nanoid();
 
   const newUser = await User.create({
     ...req.body,
     password: hashPassword,
     avatarURL,
+    verificationToken,
   });
+
+  const verifyEmail = {
+    to: email,
+    subject: "Verify email",
+    htmlContent: `<a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
+  };
+
+  await sendEmail(verifyEmail)
 
   res.status(201).json({
     user: {
@@ -91,7 +109,7 @@ const updateSubscription = async (req, res) => {
 const updateAvatar = async (req, res) => {
   const { _id } = req.user;
   const { path: tempUpload, originalname } = req.file;
-  const filename = `${_id}_${originalname}`
+  const filename = `${_id}_${originalname}`;
   const resultUpload = path.join(avatarsDir, filename);
   await fs.rename(tempUpload, resultUpload);
   const avatarURL = path.join("avatars", filename);
